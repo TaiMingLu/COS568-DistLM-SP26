@@ -67,6 +67,16 @@ python3 run_glue.py \
 
 There are several examples for training that describe these four steps. Some good resources include the [PyTorch examples repository](https://github.com/pytorch/examples) and the [Pytorch tutorials](https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html). This script is also a starting point for later parts of the assignment. Familiarize yourself with the script and run training on a single machine.
 
+### Task 1 Results
+
+| Epoch | Accuracy |
+|-------|----------|
+| 1 | 62.82% |
+| 2 | 64.98% |
+| 3 | 62.09% |
+
+Average loss: 0.6365, 117 global steps, batch size 64, ~5.5 min on CPU.
+
 
 ## Part 2: Distributed Data Parallel Training
 
@@ -92,6 +102,14 @@ python run_glue.py [other input args] --master_ip $ip_address$ --master_port $po
 ```
 Here `local_rank=0, 1, 2, 3`, which corresponds to your node ID. We recommend using `tmux` to keep the session persistent.
 
+### Task 2a Results
+
+| Method | Epochs | Accuracy | Avg Loss |
+|--------|--------|----------|----------|
+| Task 1 (single-node) | 1 | 62.82% | 0.6365 |
+| Task 2a (gather/scatter, 4 workers) | 1 | 58.84% | 0.6985 |
+
+Batch size: 16 per worker * 4 workers = 64 total. Training time: ~53 min (1 epoch) due to per-parameter gather/scatter overhead.
 
 ### Part 2(b): Gradient Synchronization with all_reduce
 
