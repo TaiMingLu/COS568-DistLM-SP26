@@ -76,7 +76,33 @@ Step 0 losses match across all methods. DDP diverges from step 1 onward because 
 
 ## Task 4: Profiling and Communication Overhead
 
-Profiled using `torch.profiler.profile` with `torch.profiler.schedule(wait=0, warmup=0, active=1, repeat=0)`. Each step is profiled individually and exported via `tensorboard_trace_handler`. Step 0 is discarded; steps 1-3 are analyzed. Traces are viewable in `chrome://tracing`.
+Profiled using `torch.profiler.profile` with `torch.profiler.schedule(wait=0, warmup=0, active=1, repeat=0)`. Each step is profiled individually and exported via `tensorboard_trace_handler`. Step 0 is discarded; steps 1-3 are analyzed.
+
+### Profiling Traces
+
+**Task 2a -- gather/scatter (steps 1-3):**
+
+![Task 2a Step 1](tracing/node202.ionic.cs.princeton.edu_3641689.1773993987520478407.png)
+![Task 2a Step 2](tracing/node202.ionic.cs.princeton.edu_3641689.1773993995816679793.png)
+![Task 2a Step 3](tracing/node202.ionic.cs.princeton.edu_3641689.1773994004188960682.png)
+
+The traces show `gloo:gather` and `gloo:scatter` operations occurring sequentially after the backward pass, one per parameter.
+
+**Task 2b -- all_reduce (steps 1-3):**
+
+![Task 2b Step 1](tracing/node202.ionic.cs.princeton.edu_3641690.1773993983951082827.png)
+![Task 2b Step 2](tracing/node202.ionic.cs.princeton.edu_3641690.1773993990540950271.png)
+![Task 2b Step 3](tracing/node202.ionic.cs.princeton.edu_3641690.1773993996983698119.png)
+
+The traces show `gloo:all_reduce` operations after the backward pass. Fewer total communication calls than gather/scatter since each parameter requires only one collective instead of two.
+
+**Task 3 -- DDP (steps 1-3):**
+
+![Task 3 Step 1](tracing/node202.ionic.cs.princeton.edu_3641688.1773993978645723639.png)
+![Task 3 Step 2](tracing/node202.ionic.cs.princeton.edu_3641688.1773993984310721990.png)
+![Task 3 Step 3](tracing/node202.ionic.cs.princeton.edu_3641688.1773993989814604437.png)
+
+The traces show `gloo:all_reduce` calls overlapping with the backward computation under the `DistributedDataParallel.forward` span. DDP buckets gradients and initiates communication during the backward pass rather than waiting until it completes.
 
 ### Communication Overhead (Rank 0)
 
@@ -152,3 +178,4 @@ For BERT-base on RTE (a small dataset), single-node training is more efficient. 
 - Task 2b: Per-parameter `torch.distributed.all_reduce(SUM)` followed by division by world_size
 - Task 3: Model wrapped with `torch.nn.parallel.DistributedDataParallel` after `model.to(device)`; gradient sync is automatic during backward
 - Task 4: `torch.profiler.profile` with `schedule(wait=0, warmup=0, active=1, repeat=0)` and `tensorboard_trace_handler` for incremental trace export. Step 0 discarded in analysis.
+
