@@ -102,14 +102,15 @@ python run_glue.py [other input args] --master_ip $ip_address$ --master_port $po
 ```
 Here `local_rank=0, 1, 2, 3`, which corresponds to your node ID. We recommend using `tmux` to keep the session persistent.
 
-### Task 2a Results
+### Distributed Training Results (1 epoch, 4 nodes)
 
-| Method | Epochs | Accuracy | Avg Loss |
-|--------|--------|----------|----------|
-| Task 1 (single-node) | 1 | 62.82% | 0.6365 |
-| Task 2a (gather/scatter, 4 workers) | 1 | 58.84% | 0.6985 |
+| Method | Accuracy | Avg Loss |
+|--------|----------|----------|
+| Task 2a (gather/scatter) | 58.84% | 0.6985 |
+| Task 2b (all_reduce) | 58.84% | 0.6985 |
+| Task 3 (DDP) | 59.57% | 0.6937 |
 
-Batch size: 16 per worker * 4 workers = 64 total. Training time: ~53 min (1 epoch) due to per-parameter gather/scatter overhead.
+Batch size: 16 per worker * 4 workers = 64 total. Tasks 2a and 2b produce identical loss curves as expected. Task 3 differ slightly as DDP averages gradients during backward.
 
 ### Part 2(b): Gradient Synchronization with all_reduce
 

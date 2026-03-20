@@ -113,16 +113,16 @@ def train(args, train_dataset, model, tokenizer):
     model.zero_grad()
     train_iterator = trange(int(args.num_train_epochs), desc="Epoch", disable=args.local_rank not in [-1, 0])
     set_seed(args)  # Added here for reproductibility (even between python 2 and 3)
-    # Profiler: skip 1st step, profile 3 steps
-    prof_schedule = torch.profiler.schedule(wait=1, warmup=0, active=3, repeat=1)
+    # Profiler: profile each step individually; skip step 0 in analysis
+    prof_schedule = torch.profiler.schedule(wait=0, warmup=0, active=1, repeat=0)
     trace_dir = os.path.join(args.output_dir, "profiling")
     os.makedirs(trace_dir, exist_ok=True)
-    trace_file = os.path.join(trace_dir, f"trace_rank{args.local_rank}.json")
 
     with torch.profiler.profile(
         schedule=prof_schedule,
-        record_shapes=True,
-        with_stack=True,
+        on_trace_ready=torch.profiler.tensorboard_trace_handler(trace_dir),
+        record_shapes=False,
+        with_stack=False,
     ) as prof:
         for _ in train_iterator:
             epoch_iterator = tqdm(train_dataloader, desc="Iteration", disable=args.local_rank not in [-1, 0])
@@ -177,8 +177,7 @@ def train(args, train_dataset, model, tokenizer):
 
             break  # Only need one partial epoch for profiling
 
-    prof.export_chrome_trace(trace_file)
-    logger.info("Profiling trace saved to %s", trace_file)
+    logger.info("Profiling traces saved to %s", trace_dir)
 
     return global_step, tr_loss / max(global_step, 1)
 

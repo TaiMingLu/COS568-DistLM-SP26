@@ -22,6 +22,7 @@ import glob
 import logging
 import os
 import random
+import time
 
 import numpy as np
 import torch
@@ -116,6 +117,7 @@ def train(args, train_dataset, model, tokenizer):
     for _ in train_iterator:
         epoch_iterator = tqdm(train_dataloader, desc="Iteration", disable=args.local_rank not in [-1, 0])
         for step, batch in enumerate(epoch_iterator):
+            step_start = time.time()
             model.train()
             batch = tuple(t.to(args.device) for t in batch)
             inputs = {'input_ids':      batch[0],
@@ -169,6 +171,9 @@ def train(args, train_dataset, model, tokenizer):
                 scheduler.step() # Update learning rate schedule
                 model.zero_grad()
                 global_step += 1
+
+            step_time = time.time() - step_start
+            print(f"[rank {args.local_rank}] step {step} | loss {loss.item():.6f} | time {step_time:.4f}s", flush=True)
 
             if args.max_steps > 0 and global_step > args.max_steps:
                 epoch_iterator.close()
